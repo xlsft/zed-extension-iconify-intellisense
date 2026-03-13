@@ -1,7 +1,3 @@
-[iconify-intellisense]
-submodule = "extensions/iconify-intellisense"
-version = "0.0.1"
-
 id = "iconify-intellisense"
 name = "Iconify IntelliSense"
 version = "0.0.1"
