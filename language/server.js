@@ -1,17 +1,70 @@
 'use strict';
 
-const fs = require('fs'), path = require('path')
+const fs = require('fs'), path = require('path'), os = require('os')
 
 const regex = { icon: /([a-z0-9-]+):([a-z0-9-]*)/gi, lines: /\r?\n/, header: /Content-Length: (\d+)/i }
-const cache = { root: null, collections: new Map(), icons: new Map(), documents: new Map(), buffer: '' }
+const cache = { root: null, root_checked: false, collections: new Map(), icons: new Map(), documents: new Map(), buffer: '' }
+
+const resolve = {
+    path: () => {
+        const candidates = new Set()
+        const add = (value) => { if (value) candidates.add(value) }
+        const add_root = (root) => { if (root) add(path.join(root, 'collections.json')) }
+        const add_node_modules = (root) => { if (root) add(path.join(root, 'node_modules', '@iconify', 'json', 'collections.json')) }
+
+        if (process.env.ICONIFY_JSON_PATH) add(process.env.ICONIFY_JSON_PATH)
+        if (process.env.ICONIFY_JSON_ROOT) add_root(process.env.ICONIFY_JSON_ROOT)
+
+        if (process.env.NODE_PATH) {
+            for (const entry of process.env.NODE_PATH.split(path.delimiter)) add(path.join(entry, '@iconify', 'json', 'collections.json'))
+        }
+
+        try { add(require.resolve('@iconify/json/collections.json')) } catch {}
+
+        const search_up = (start) => {
+            if (!start) return
+            let dir = path.resolve(start)
+            while (true) {
+                add_node_modules(dir)
+                const parent = path.dirname(dir)
+                if (parent === dir) break
+                dir = parent
+            }
+        }
+
+        search_up(__dirname)
+        try { search_up(process.cwd()) } catch {}
+
+        const extension_id = process.env.ZED_EXTENSION_ID || 'iconify-intellisense'
+        const home = os.homedir && os.homedir()
+
+        if (process.env.XDG_DATA_HOME) add(path.join(process.env.XDG_DATA_HOME, 'zed', 'extensions', 'work', extension_id, 'node_modules', '@iconify', 'json', 'collections.json'))
+        if (home) {
+            add(path.join(home, '.local', 'share', 'zed', 'extensions', 'work', extension_id, 'node_modules', '@iconify', 'json', 'collections.json'))
+            add(path.join(home, 'Library', 'Application Support', 'Zed', 'extensions', 'work', extension_id, 'node_modules', '@iconify', 'json', 'collections.json'))
+        }
+        if (process.env.APPDATA) add(path.join(process.env.APPDATA, 'Zed', 'extensions', 'work', extension_id, 'node_modules', '@iconify', 'json', 'collections.json'))
+
+        for (const candidate of candidates) {
+            try {
+                if (candidate && fs.statSync(candidate).isFile()) return candidate
+            } catch {}
+        }
+        return null
+    },
+    root: () => {
+        if (cache.root_checked) return cache.root
+        cache.root_checked = true
+        const path = resolve.path()
+        cache.root = path ? path.dirname(path) : null
+        return cache.root
+    }
+}
 
 const get = {
     collection: (name) => { try {
         const key = name.toLowerCase(); if (cache.collections.has(key)) return cache.collections.get(key)
-        let collections = cache.root; if (!collections) {
-            try { collections = cache.root = path.dirname(require.resolve('@iconify/json/collections.json')) } catch (error) { cache.root = collections = null }
-            if (!collections) { cache.collections.set(key, null); return null }
-        }
+        const collections = resolve.root(); if (!collections) { cache.collections.set(key, null); return null }
         const collection = path.join(collections, 'json', `${key}.json`); if (!fs.existsSync(collection)) { cache.collections.set(key, null); return null }
         const parsed = JSON.parse(fs.readFileSync(collection, 'utf8')); cache.collections.set(key, parsed)
         return parsed;
