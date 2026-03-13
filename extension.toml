@@ -1,0 +1,39 @@
+id = "iconify-intellisense"
+name = "Iconify IntelliSense"
+version = "0.0.1"
+schema_version = 1
+authors = ["xlsft <dev@xlsft.ru>"]
+description = "Iconify IntelliSense for Zed: icon preview, completion, and snippets."
+repository = "https://github.com/xlsft/zed-extension-iconify-intellisense"
+
+[language_servers.iconify-intellisense]
+name = "Iconify IntelliSense"
+language = "JavaScript"
+languages = [
+  "JavaScript",
+  "TypeScript",
+  "TSX",
+  "JSX",
+  "HTML",
+  "CSS",
+  "JSON",
+  "Markdown",
+  "Vue.js",
+  "Svelte",
+  "Astro",
+  "Plain Text",
+]
+
+[language_servers.iconify-intellisense.language_ids]
+JavaScript = "javascript"
+TypeScript = "typescript"
+TSX = "typescriptreact"
+JSX = "javascriptreact"
+HTML = "html"
+CSS = "css"
+JSON = "json"
+Markdown = "markdown"
+"Vue.js" = "vue"
+Svelte = "svelte"
+Astro = "astro"
+"Plain Text" = "plaintext"
